@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+import html
+import streamlit.components.v1 as components
 
 DATA_DIR = Path("data")
 SUMMARIES_PATH = DATA_DIR / "summaries.csv"
@@ -76,7 +78,9 @@ def render_topic_bubbles(
     topics_df: pd.DataFrame,
     max_per_row: int = 5,
     row_spacing_px: int = 16,
-    bottom_spacing_px: int = 24,
+    bottom_spacing_px: int = 0,
+    gap_px: int = 12,
+    min_height_px: int = 52,
 ):
     if topics_df.empty:
         st.info("No topics to display.")
@@ -88,42 +92,83 @@ def render_topic_bubbles(
     ]
 
     for row_idx, row_df in enumerate(rows):
-        # Always allocate a fixed number of columns (keeps bubble width stable)
-        cols = st.columns(max_per_row)
+        bubbles_html = ""
 
-        # Fill only the needed columns; leave the rest empty
-        for i, (_, r) in enumerate(row_df.iterrows()):
-            with cols[i]:
-                icon = sentiment_icon(r["sentiment_label"])
-                st.markdown(
-                    f"""
-                    <div style="
-                        border: 1px solid #ddd;
-                        border-radius: 16px;
-                        padding: 10px;
-                        text-align: center;
-                        font-size: 14px;
-                        background-color: #fafafa;
-                    ">
-                        <div style="font-size: 22px;">{icon}</div>
-                        <div>{r['topic_label']}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+        for _, r in row_df.iterrows():
+            icon = sentiment_icon(r["sentiment_label"])
+            topic = html.escape(str(r["topic_label"]))  # IMPORTANT: prevents broken HTML
 
-        # Space BETWEEN rows
+            bubbles_html += f"""
+              <div class="bubble">
+                <div class="icon">{icon}</div>
+                <div class="label">{topic}</div>
+              </div>
+            """
+
+        # placeholders so the row always has 5 fixed-width slots
+        empty_slots = max_per_row - len(row_df)
+        for _ in range(empty_slots):
+            bubbles_html += """<div class="placeholder"></div>"""
+
+        row_html = f"""
+        <div class="row">
+          {bubbles_html}
+        </div>
+        """
+
+        css = f"""
+        <style>
+          .row {{
+              display: flex;
+              gap: 12px;
+              align-items: stretch;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                           Roboto, Oxygen, Ubuntu, Cantarell,
+                           "Helvetica Neue", Arial, sans-serif;
+            }}
+          .bubble, .placeholder {{
+            flex: 1 1 0;
+          }}
+          .bubble {{
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            padding: 10px;
+            background: #fafafa;
+            text-align: center;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+
+            min-height: {min_height_px}px;
+            box-sizing: border-box;
+          }}
+          .icon {{
+            font-size: 22px;
+            margin-bottom: 4px;
+            line-height: 1;
+          }}
+          .label {{
+            font-size: 0.875rem;
+            line-height: 1.2;
+            word-break: break-word;
+          }}
+          .placeholder {{
+            /* keep the 5-column grid without showing an empty bubble */
+          }}
+        </style>
+        """
+
+        # Render this row as a self-contained HTML fragment
+        components.html(css + row_html, height=min_height_px + 40)
+
+        # Space between rows
         if row_idx < len(rows) - 1:
-            st.markdown(
-                f"<div style='height: {row_spacing_px}px;'></div>",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"<div style='height:{row_spacing_px}px'></div>", unsafe_allow_html=True)
 
-    # Space AFTER the whole grid (before next title/section)
-    st.markdown(
-        f"<div style='height: {bottom_spacing_px}px;'></div>",
-        unsafe_allow_html=True
-    )
+    # Space after the whole grid
+    st.markdown(f"<div style='height:{bottom_spacing_px}px'></div>", unsafe_allow_html=True)
+
 
 @st.cache_data(show_spinner=False)
 def load_domain_freqs(domain: str) -> pd.DataFrame:
@@ -328,11 +373,11 @@ left, right = st.columns(2, gap="large")
 
 with left:
     st.subheader("Standard summary")
+
+    st.markdown("**Top topics**")
     st.caption(
         "Topics most frequently mentioned in this accommodation’s reviews."
     )
-
-    st.markdown("**Top topics**")
     render_topic_bubbles(property_top)
 
     st.markdown("**Textual summary**")
