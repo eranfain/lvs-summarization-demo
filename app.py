@@ -62,6 +62,69 @@ def list_domains(data_dir: Path) -> list[str]:
             domains.append(m.group("domain"))
     return sorted(domains)
 
+def sentiment_icon(sentiment: str) -> str:
+    s = (sentiment or "").lower()
+    if s == "positive":
+        return "👍"
+    if s == "negative":
+        return "👎"
+    if s == "neutral":
+        return "~"
+    return "~"
+
+def render_topic_bubbles(
+    topics_df: pd.DataFrame,
+    max_per_row: int = 5,
+    row_spacing_px: int = 16,
+    bottom_spacing_px: int = 24,
+):
+    if topics_df.empty:
+        st.info("No topics to display.")
+        return
+
+    rows = [
+        topics_df.iloc[i:i + max_per_row]
+        for i in range(0, len(topics_df), max_per_row)
+    ]
+
+    for row_idx, row_df in enumerate(rows):
+        # Always allocate a fixed number of columns (keeps bubble width stable)
+        cols = st.columns(max_per_row)
+
+        # Fill only the needed columns; leave the rest empty
+        for i, (_, r) in enumerate(row_df.iterrows()):
+            with cols[i]:
+                icon = sentiment_icon(r["sentiment_label"])
+                st.markdown(
+                    f"""
+                    <div style="
+                        border: 1px solid #ddd;
+                        border-radius: 16px;
+                        padding: 10px;
+                        text-align: center;
+                        font-size: 14px;
+                        background-color: #fafafa;
+                    ">
+                        <div style="font-size: 22px;">{icon}</div>
+                        <div>{r['topic_label']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # Space BETWEEN rows
+        if row_idx < len(rows) - 1:
+            st.markdown(
+                f"<div style='height: {row_spacing_px}px;'></div>",
+                unsafe_allow_html=True
+            )
+
+    # Space AFTER the whole grid (before next title/section)
+    st.markdown(
+        f"<div style='height: {bottom_spacing_px}px;'></div>",
+        unsafe_allow_html=True
+    )
+
 @st.cache_data(show_spinner=False)
 def load_domain_freqs(domain: str) -> pd.DataFrame:
     path = DATA_DIR / f"{domain}_freqs.csv"
@@ -245,7 +308,7 @@ with st.sidebar:
     )
 
     st.divider()
-    k_topics = st.slider("Top-K topics", min_value=5, max_value=20, value=10, step=1)
+    k_topics = st.slider("Top-K topics", min_value=5, max_value=20, value=5, step=1)
 
 # Load summaries
 summ_row = summ_df.loc[summ_df["accommodation_id"] == str(accommodation_id)]
@@ -266,63 +329,36 @@ left, right = st.columns(2, gap="large")
 with left:
     st.subheader("Standard summary")
     st.caption(
-        "Top topics most frequently mentioned in this accommodation’s reviews."
+        "Topics most frequently mentioned in this accommodation’s reviews."
     )
 
-    st.markdown("**Top topics (property frequency)**")
-    st.dataframe(
-        property_top,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "topic_label": st.column_config.TextColumn("Topic"),
-            "sentiment_label": st.column_config.TextColumn("Sentiment"),
-            "frequency": st.column_config.NumberColumn(
-                "Frequency", format="%.4f"
-            ),
-        },
-    )
+    st.markdown("**Top topics**")
+    render_topic_bubbles(property_top)
 
     st.markdown("**Textual summary**")
-    if baseline_text.strip():
-        st.write(baseline_text)
-    else:
-        st.info("No baseline summary available.")
+    st.write(baseline_text)
+
+over_df = diverging_top[diverging_top["divergence"] > 0]
+under_df = diverging_top[diverging_top["divergence"] < 0]
+over_df = over_df.sort_values("divergence", ascending=False)
+under_df = under_df.sort_values("divergence")
 
 with right:
     st.subheader("DiSCo summary")
-    st.caption("Domain-topics + diverging topics for the selected property + expectations-aware textual summary.")
 
-    st.markdown("**Top topics (domain frequency)**")
-    st.dataframe(
-        domain_top,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "topic_label": st.column_config.TextColumn("Topic"),
-            "sentiment_label": st.column_config.TextColumn("Sentiment"),
-            "weight": st.column_config.NumberColumn("Weight", format="%.4f"),
-        },
-    )
+    st.markdown("**Top topics in the domain**")
+    render_topic_bubbles(domain_top, max_per_row=5)
 
-    st.markdown("**Most diverging topics (property vs domain)**")
-    st.dataframe(
-        diverging_top,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "topic_label": st.column_config.TextColumn("Topic"),
-            "sentiment_label": st.column_config.TextColumn("Sentiment"),
-            "divergence": st.column_config.NumberColumn("Divergence", format="%.4f"),
-            "direction": st.column_config.TextColumn("Direction"),
-        },
-    )
+    st.markdown("**Overrepresented topics**")
+    st.caption("Mentioned more often than expected for this domain.")
+    render_topic_bubbles(over_df)
+
+    st.markdown("**Underrepresented topics**")
+    st.caption("Mentioned less often than expected for this domain.")
+    render_topic_bubbles(under_df)
 
     st.markdown("**Textual summary**")
-    if ea_text.strip():
-        st.write(ea_text)
-    else:
-        st.info("No expectations_aware_summary found for this accommodation_id in summaries.csv.")
+    st.write(ea_text)
 
 # ---------------------------
 # Footer / explanation (good for demos)
