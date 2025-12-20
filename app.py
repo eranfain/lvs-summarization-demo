@@ -79,7 +79,6 @@ def render_topic_bubbles(
     max_per_row: int = 5,
     row_spacing_px: int = 16,
     bottom_spacing_px: int = 0,
-    gap_px: int = 12,
     min_height_px: int = 52,
 ):
     if topics_df.empty:
@@ -304,7 +303,16 @@ def top_k_diverging_topics(signatures_df: pd.DataFrame, accommodation_id: str, k
 # ---------------------------
 
 st.title("DiSCo Review Summaries (IUI Demo)")
-
+st.markdown(
+    """
+    <div style="margin-bottom: 16px;">
+        👍 Positive sentiment &nbsp;&nbsp;
+        👎 Negative sentiment &nbsp;&nbsp;
+        ~ Neutral
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 with st.sidebar:
     st.header("Selection")
 
@@ -373,6 +381,7 @@ left, right = st.columns(2, gap="large")
 
 with left:
     st.subheader("Standard summary")
+    st.caption("What guests talk about in this accommodation")
 
     st.markdown("**Most mentioned topics in this accommodation**")
     # st.caption(
@@ -390,16 +399,38 @@ under_df = under_df.sort_values("divergence")
 
 with right:
     st.subheader("DiSCo summary")
+    st.caption("What stands out / absent compared to other accommodations from the same domain")
 
-    st.markdown("**Most mentioned topics in similar accommodations**")
+    st.markdown("**Most mentioned topics in other accommodations from the same domain**")
+    st.caption(
+        "These topics reflect what guests typically mention in other accommodations from the same domain, and serve as a reference point."
+    )
     render_topic_bubbles(domain_top, max_per_row=5)
 
-    st.markdown("**Topics mentioned more in this accommodation (overrepresented)**")
-    # st.caption("Mentioned more often than expected for this domain.")
+    st.markdown(
+        """
+        <div style="font-weight: 600;">
+            Topics mentioned more than expected in this accommodation
+            <span style="color: #888; font-weight: 400;">
+                (overrepresented)
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     render_topic_bubbles(over_df)
 
-    st.markdown("**Topics mentioned less in this accommodation (underrepresented)**")
-    # st.caption("Mentioned less often than expected for this domain.")
+    st.markdown(
+        """
+        <div style="font-weight: 600;">
+            Topics mentioned less than expected in this accommodation
+            <span style="color: #888; font-weight: 400;">
+                (underrepresented)
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     render_topic_bubbles(under_df)
 
     st.markdown("**Textual summary**")
