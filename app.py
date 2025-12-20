@@ -10,7 +10,7 @@ DATA_DIR = Path("data")
 SUMMARIES_PATH = DATA_DIR / "summaries.csv"
 
 st.set_page_config(
-    page_title="IUI Demo – DiSCo Summaries",
+    page_title="DiSCo Summaries Demo",
     layout="wide",
 )
 
@@ -302,7 +302,7 @@ def top_k_diverging_topics(signatures_df: pd.DataFrame, accommodation_id: str, k
 # UI
 # ---------------------------
 
-st.title("DiSCo Review Summaries (IUI Demo)")
+st.title("Domain-informed Summarization through Contrast (DiSCo) Demo")
 st.markdown(
     """
     <div style="margin-bottom: 16px;">
@@ -403,7 +403,7 @@ with right:
 
     st.markdown("**Most mentioned topics in other accommodations from the same domain**")
     st.caption(
-        "These topics reflect what guests typically mention in other accommodations from the same domain, and serve as a reference point."
+        "These topics reflect what guests typically mention in other accommodations from the same domain, and serve as a reference point"
     )
     render_topic_bubbles(domain_top, max_per_row=5)
 
