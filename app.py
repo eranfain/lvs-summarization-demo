@@ -374,10 +374,10 @@ left, right = st.columns(2, gap="large")
 with left:
     st.subheader("Standard summary")
 
-    st.markdown("**Top topics**")
-    st.caption(
-        "Topics most frequently mentioned in this accommodation’s reviews."
-    )
+    st.markdown("**Most mentioned topics in this accommodation**")
+    # st.caption(
+    #     "Topics most frequently mentioned in this accommodation’s reviews."
+    # )
     render_topic_bubbles(property_top)
 
     st.markdown("**Textual summary**")
@@ -391,15 +391,15 @@ under_df = under_df.sort_values("divergence")
 with right:
     st.subheader("DiSCo summary")
 
-    st.markdown("**Top topics in the domain**")
+    st.markdown("**Most mentioned topics in similar accommodations**")
     render_topic_bubbles(domain_top, max_per_row=5)
 
-    st.markdown("**Overrepresented topics**")
-    st.caption("Mentioned more often than expected for this domain.")
+    st.markdown("**Topics mentioned more in this accommodation (overrepresented)**")
+    # st.caption("Mentioned more often than expected for this domain.")
     render_topic_bubbles(over_df)
 
-    st.markdown("**Underrepresented topics**")
-    st.caption("Mentioned less often than expected for this domain.")
+    st.markdown("**Topics mentioned less in this accommodation (underrepresented)**")
+    # st.caption("Mentioned less often than expected for this domain.")
     render_topic_bubbles(under_df)
 
     st.markdown("**Textual summary**")
