@@ -308,7 +308,6 @@ st.markdown(
     <div style="margin-bottom: 16px;">
         👍 Positive sentiment &nbsp;&nbsp;
         👎 Negative sentiment &nbsp;&nbsp;
-        ~ Neutral
     </div>
     """,
     unsafe_allow_html=True
